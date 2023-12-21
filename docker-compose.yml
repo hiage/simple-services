@@ -40,9 +40,6 @@ services:
     hostname: prometheus
     image: prom/prometheus:latest
     privileged: true
-    links:
-      - producer:producer
-      - consumer:consumer
     command: 
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--web.external-url=http://prometheus:9090/'
@@ -53,14 +50,13 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      - './prometheusdata:/etc/prometheus'
       - '/etc/timezone:/etc/timezone:ro'
       - '/etc/localtime:/etc/localtime:ro'
       - './prometheus.yml:/etc/prometheus/prometheus.yml'
     networks:
       netstack:
         ipv4_address: ${IP_MONITORING}
-        
+
 networks:
   netstack:
     ipam:
