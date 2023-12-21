@@ -1,0 +1,68 @@
+version: "3.7"
+
+services:
+  producer:
+    image: docker.io/hiage/producer:${TAG_VERSION}
+    #pull_policy: always
+    hostname: producer-${SERVICES_VERSION}
+    container_name: producer-${SERVICES_VERSION}
+    networks:
+      netstack:
+        ipv4_address: ${IP_PRODUCER}
+    ports:
+      - "${PORT_PRODUCER}:${PORT_PRODUCER}"
+    healthcheck:
+      test: ["CMD", "curl", "-XGET", "http://${IP_PRODUCER}:${PORT_PRODUCER}"]
+      interval: 1s
+      timeout: 3s
+      retries: 5
+
+  consumer:
+    image: docker.io/hiage/consumer:${TAG_VERSION}
+    #pull_policy: always
+    hostname: consumer-${SERVICES_VERSION}
+    container_name: consumer-${SERVICES_VERSION}
+    networks:
+      netstack:
+        ipv4_address: ${IP_CONSUMER}
+    environment:
+        PRODUCER_API: ${IP_PRODUCER}:${PORT_PRODUCER}
+    ports:
+      - "${PORT_CONSUMER}:${PORT_CONSUMER}"
+    healthcheck:
+      test: ["CMD", "curl", "-XGET", "http://${IP_CONSUMER}:${PORT_CONSUMER}"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+
+  prometheus:
+    container_name: prometheus
+    hostname: prometheus
+    image: prom/prometheus:latest
+    privileged: true
+    links:
+      - producer:producer
+      - consumer:consumer
+    command: 
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--web.external-url=http://prometheus:9090/'
+      - '--web.route-prefix=/'
+      - '--web.enable-lifecycle'
+      - '--storage.tsdb.retention.time=3d'
+    #restart: always
+    ports:
+      - "9090:9090"
+    volumes:
+      - './prometheusdata:/etc/prometheus'
+      - '/etc/timezone:/etc/timezone:ro'
+      - '/etc/localtime:/etc/localtime:ro'
+      - './prometheus.yml:/etc/prometheus/prometheus.yml'
+    networks:
+      netstack:
+        ipv4_address: ${IP_MONITORING}
+        
+networks:
+  netstack:
+    ipam:
+      config:
+        - subnet: ${IP_SUBNET}
